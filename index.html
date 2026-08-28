@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مُولد أكواد روبلوكس المحلي</title>
+    <title>مُولد أكواد روبلوكس المحلي والمزامنة</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -11,6 +11,7 @@
             --accent: #38bdf8;
             --text: #f8fafc;
             --border: #334155;
+            --success: #22c55e;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -37,6 +38,9 @@
             color: var(--accent);
             text-align: center;
         }
+        .section {
+            margin-bottom: 16px;
+        }
         label {
             display: block;
             margin-bottom: 8px;
@@ -55,52 +59,81 @@
         }
         textarea {
             resize: vertical;
-            height: 100px;
-            margin-bottom: 16px;
+            height: 90px;
         }
         button {
             background-color: var(--accent);
             color: #0f172a;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 16px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
-            font-size: 16px;
+            font-size: 15px;
             transition: opacity 0.2s;
+            margin-top: 8px;
         }
         button:hover {
             opacity: 0.9;
         }
-        .output-box {
-            margin-top: 20px;
+        .btn-folder {
+            background-color: #475569;
+            color: white;
+            margin-bottom: 12px;
+        }
+        .status {
+            font-size: 13px;
+            color: var(--success);
+            margin-top: 6px;
+            text-align: center;
         }
         pre {
-            height: 150px;
+            height: 130px;
             overflow-y: auto;
             text-align: left;
             direction: ltr;
+            margin-top: 6px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>مُولد أكواد روبلوكس</h2>
-        <label for="ideaInput">اكتب الفكرة أو التعديل:</label>
-        <textarea id="ideaInput" placeholder="مثال: ابني بارت أحمر أو اطبع رسالة ترحيبية..."></textarea>
+        <h2>روبلوكس سينك جنيريتور</h2>
         
-        <button onclick="generateCode()">توليد كود Luau</button>
+        <div class="section">
+            <button class="btn-folder" onclick="selectFolder()">📁 اختر مجلد المشروع المحلي</button>
+            <div id="folderStatus" class="status">لم يتم اختيار مجلد بعد</div>
+        </div>
 
-        <div class="output-box">
+        <div class="section">
+            <label for="ideaInput">اكتب الفكرة أو التعديل:</label>
+            <textarea id="ideaInput" placeholder="مثال: ابني بارت أحمر..."></textarea>
+            <button onclick="generateAndSave()">توليد وحفظ في الملف المحلي</button>
+        </div>
+
+        <div class="section">
             <label for="codeOutput">الكود الناتج:</label>
-            <pre id="codeOutput">-- ستظهر النتيجة هنا بعد كتابة الفكرة...</pre>
+            <pre id="codeOutput">-- ستظهر النتيجة هنا...</pre>
         </div>
     </div>
 
     <script>
-        function generateCode() {
+        let selectedFolderHandle = null;
+
+        async function selectFolder() {
+            try {
+                // فتح نافذة اختيار المجلد من جهازك
+                selectedFolderHandle = await window.showDirectoryPicker();
+                document.getElementById('folderStatus').innerText = "تم ربط المجلد بنجاح: " + selectedFolderHandle.name;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('folderStatus').innerText = "تم إلغاء اختيار المجلد.";
+            }
+        }
+
+        async function generateAndSave() {
             const idea = document.getElementById('ideaInput').value.trim().toLowerCase();
             let luauCode = "";
 
@@ -120,11 +153,27 @@
                 luauCode = "-- الرجاء إدخال فكرة صحيحة أولاً.";
             } else {
                 luauCode = `-- Generated for idea: ${idea}\n` +
-                           `-- [ملاحظة]: لم يتم التعرف على قاعدة مخصصة، تمت إضافة قالب افتراضي.\n` +
                            `print("الفكرة الواردة: ${idea}")`;
             }
 
             document.getElementById('codeOutput').innerText = luauCode;
+
+            // حفظ الملف تلقائياً في المجلد المحدد إذا تم ربطه
+            if (selectedFolderHandle) {
+                try {
+                    // إنشاء أو فتح ملف باسم generated_script.lua داخل المجلد
+                    const fileHandle = await selectedFolderHandle.getFileHandle("generated_script.lua", { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(luauCode);
+                    await writable.close();
+                    document.getElementById('folderStatus').innerText = "✅ تم تحديث وحفظ الملف في المجلد المحلي بنجاح!";
+                } catch (err) {
+                    console.error(err);
+                    alert("حدث خطأ أثناء حفظ الملف، تأكد من منح الصلاحيات.");
+                }
+            } else {
+                alert("الرجاء اختيار المجلد المحلي أولاً قبل التوليد لكي يتم الحفظ تلقائياً.");
+            }
         }
     </script>
 </body>
